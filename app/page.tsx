@@ -1,113 +1,188 @@
-import Image from 'next/image'
+'use client'
+import Image from "next/image";
+import {useEffect, useState} from "react";
+import {Breed, TheCatAPI} from "@thatapicompany/thecatapi";
 
-export default function Home() {
-  return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <div className="z-10 w-full max-w-5xl items-center justify-between font-mono text-sm lg:flex">
-        <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto  lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
-          Get started by editing&nbsp;
-          <code className="font-mono font-bold">app/page.tsx</code>
-        </p>
-        <div className="fixed bottom-0 left-0 flex h-48 w-full items-end justify-center bg-gradient-to-t from-white via-white dark:from-black dark:via-black lg:static lg:h-auto lg:w-auto lg:bg-none">
-          <a
-            className="pointer-events-none flex place-items-center gap-2 p-8 lg:pointer-events-auto lg:p-0"
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{' '}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className="dark:invert"
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
-        </div>
-      </div>
+export default function Page() {
+    const [html, setHtml] = useState(<div>Loading...</div>);
+    const [apiKey, setApiKey] = useState("");
+    const [score, setScore] = useState(0);
+    const [message, setMessage] = useState("");
+    const [error, setError] = useState("");
+    const [currentImage, setCurrentImage] = useState("/loading.gif");
+    const [currentBreed, setCurrentBreed] = useState(Breed.AEGEAN);
+    const [randomBreeds, setRandomBreeds]: [randomBreeds: Breed[], setRandomBreeds: any] = useState([]);
+    const [api, setApi] = useState(new TheCatAPI(""));
 
-      <div className="relative flex place-items-center before:absolute before:h-[300px] before:w-[480px] before:-translate-x-1/2 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-[240px] after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700 before:dark:opacity-10 after:dark:from-sky-900 after:dark:via-[#0141ff] after:dark:opacity-40 before:lg:h-[360px]">
-        <Image
-          className="relative dark:drop-shadow-[0_0_0.3rem_#ffffff70] dark:invert"
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
+    useEffect(() => {
+        if (window.localStorage.getItem("apiKey") !== null && window.localStorage.getItem("apiKey") !== undefined) {
+            setApiKey(window.localStorage.getItem("apiKey") as string)
+        } else {
+            setApiKeyUi()
+        }
+    }, []);
 
-      <div className="mb-32 grid text-center lg:mb-0 lg:grid-cols-4 lg:text-left">
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Docs{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Find in-depth information about Next.js features and API.
-          </p>
-        </a>
+    useEffect(() => {
+        if (apiKey === "") {
+            return
+        }
+        setMessage("")
+        setApi(new TheCatAPI(apiKey))
+    }, [apiKey])
 
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Learn{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Learn about Next.js in an interactive course with&nbsp;quizzes!
-          </p>
-        </a>
+    useEffect(() => {
+        if (apiKey === "") {
+            return
+        }
+        async function check() {
+            try {
+                const img= await api.images.searchImages({
+                    limit: 1,
+                    hasBreeds: true,
+                    mimeTypes: ["jpg", "png"],
+                })
+                if (img[0].breeds === undefined) {
+                    window.localStorage.removeItem("apiKey")
+                    setError("API key error!")
+                    return false
+                }
+                return true
+            } catch (e) {
+                console.error(e)
+                window.localStorage.removeItem("apiKey")
+                setError("API key error!")
+                return false
+            }
+        }
+        check().then((canContinue) => {
+            if (!canContinue) {
+                return
+            }
+            setNewImage()
+        })
+    }, [api])
 
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Templates{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Explore the Next.js 13 playground.
-          </p>
-        </a>
+    useEffect(() => {
+        if (apiKey === "") {
+            return
+        }
+        if (currentImage === "") return
+        getRandomBreeds()
+    }, [currentImage])
 
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Deploy{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
-  )
+    useEffect(() => {
+        if (apiKey === "") {
+            return
+        }
+        if (randomBreeds.length === 0) return
+        setGameUi()
+    }, [randomBreeds])
+
+    async function setNewImage() {
+        try {
+            const img= await api.images.searchImages({
+                limit: 1,
+                hasBreeds: true,
+                mimeTypes: ["jpg", "png"],
+            })
+            if (img[0].breeds === undefined) {
+                window.localStorage.removeItem("apiKey")
+                setMessage("Error!")
+                return
+            }
+            setCurrentBreed(img[0].breeds[0].id)
+            setCurrentImage(img[0].url)
+        } catch (e) {
+            console.error(e)
+            window.localStorage.removeItem("apiKey")
+            setMessage("API key error!")
+        }
+    }
+
+    useEffect(() => {
+        if (error == "API key error!") setApiKeyUi()
+    }, [error])
+
+    function setApiKeyUi() {
+        setHtml(
+            <div>
+                <div className="flex justify-center">
+                    <form className="mt-5" onSubmit={(e) => {
+                        e.preventDefault()
+                        // @ts-ignore
+                        const val = e.target[0].value
+                        window.localStorage.setItem("apiKey", val)
+                        setApiKey(val)
+                    }}>
+                        <input className="p-1 rounded text-black" type="text" placeholder="API Key"></input>
+                        <button className="p-1 rounded bg-gray-700 ml-2">Set</button>
+                    </form>
+                </div>
+                <p className="flex justify-center mt-3">{error}</p>
+                <p className="flex justify-center mt-3">Please set your own TheCatAPI key.</p>
+                <p className="flex justify-center">You can get one completely for free <a href="https://thecatapi.com/signup" className="underline ml-1">here</a>.</p>
+            </div>
+        )
+    }
+
+    function setGameUi() {
+        setHtml(<div>
+            <div className="flex justify-center mt-5">
+                {
+                    randomBreeds.map((breed, i) => {
+                        return <button className="mr-5 p-1 bg-gray-700 rounded" key={i} onClick={() => checkAnswer(breed)}>{ Object.keys(Breed)[Object.values(Breed).indexOf(breed)].toLowerCase().replaceAll("_", " ").replace(/(^\w)|(\s+\w)/g, letter => letter.toUpperCase()) }</button>
+                    })
+                }
+            </div>
+            <div className="flex justify-center mt-3">
+                <h1>Score: {score}</h1>
+            </div>
+            <div className="flex justify-center mt-1">
+                <h1>{message}</h1>
+            </div>
+            <div className="flex justify-center mt-3">
+                <Image src={currentImage} alt="" width="600" height="600"></Image>
+            </div>
+            <div className="flex justify-center">
+                <button className="p-1 rounded bg-gray-700 mt-4" onClick={() => {
+                    window.localStorage.removeItem("apiKey")
+                    setMessage("")
+                    setApiKey("")
+                    setApiKeyUi()
+                }}>Remove API key</button>
+            </div>
+        </div>)
+    }
+
+    function shuffle<T>(array: T[]): T[] {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
+    }
+
+    function getRandomBreeds() {
+        let keys= Object.values(Breed).filter((breed) => breed !== currentBreed)
+        keys = shuffle(keys)
+        let items = []
+        for (let i = 0; i < 3; i++) {
+            items.push(keys[i])
+        }
+        items.push(currentBreed)
+        setRandomBreeds(shuffle(items))
+    }
+
+    function checkAnswer(answer: Breed) {
+        if (answer === currentBreed) {
+            setScore(score + 1)
+            setMessage("Correct!")
+        } else {
+            setScore(0)
+            setMessage("Incorrect!")
+        }
+        setNewImage()
+    }
+
+    return html
 }
